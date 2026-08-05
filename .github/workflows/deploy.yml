@@ -1,7 +1,8 @@
 name: Deploy to GitHub Pages
 
 on:
-  push:
+  pull_request:
+    types: [ closed ]
     branches: [ main ]
   workflow_dispatch:
 
@@ -16,6 +17,8 @@ concurrency:
 
 jobs:
   deploy:
+    # Only trigger deployment if PR was successfully merged into main (or manually triggered)
+    if: github.event_name == 'workflow_dispatch' || (github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'main')
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
