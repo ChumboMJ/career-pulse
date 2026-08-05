@@ -7,15 +7,34 @@ const ACTIVE_PROFILE_KEY = 'careerpulse_active_profile_id';
 
 const PRESET_PROFILES = [
   {
+    id: 'profile-tim-forste',
+    fullName: 'Tim Forste',
+    email: 'tforste@gmail.com',
+    phone: '971-600-4205',
+    location: 'Independence, Oregon (Remote)',
+    title: 'Senior Software Engineer',
+    yearsOfExperience: 12,
+    skills: [
+      'C#', '.NET', '.NET Core', 'ASP.NET', 'VB.NET', 'JavaScript', 'TypeScript', 'Node.js', 
+      'NestJS', 'Python', 'PowerShell', 'Azure', 'GCP', 'Docker', 'Kubernetes', 'GKE', 
+      'Pub/Sub', 'CI/CD', 'Azure DevOps', 'GitLab', 'Microservices', 'Event-Driven Architecture', 
+      'RESTful APIs', 'GraphQL', 'PostgreSQL', 'Oracle', 'Microsoft SQL Server', 'Azure Cosmos DB', 
+      'Dapper', 'Agile', 'Scrum', 'Kanban', 'TDD', 'xUnit', 'NUnit', 'Jest', 'Datadog', 
+      'Splunk', 'Git', 'Postman', 'VS Code', 'Google Gemini CLI', 'GitHub Copilot'
+    ],
+    summary: 'Senior Software Engineer with 12+ years of experience specializing in C#, .NET Core, and hybrid-cloud architectures (Azure, GCP). Proven expertise in modernizing legacy systems, architecting event-driven microservices, and integrating enterprise-scale data pipelines.',
+    updatedAt: new Date().toISOString()
+  },
+  {
     id: 'profile-alex-johnson',
     fullName: 'Alex Johnson',
     email: 'alex.johnson@example.com',
     phone: '(555) 234-5678',
     location: 'San Francisco, CA (Remote Friendly)',
-    title: 'Senior Full Stack Software Engineer',
+    title: 'Senior Full Stack Engineer (React & Node.js)',
     yearsOfExperience: 5,
     skills: [
-      'JavaScript', 'TypeScript', 'React', 'Node.js', 'Python', 'REST API',
+      'JavaScript', 'TypeScript', 'React', 'Node.js', 'Python', 'RESTful APIs',
       'GraphQL', 'PostgreSQL', 'Docker', 'AWS', 'Git', 'Agile', 'CI/CD',
       'HTML5', 'CSS3', 'TailwindCSS', 'Jest', 'Problem Solving'
     ],
@@ -35,21 +54,6 @@ const PRESET_PROFILES = [
       'OpenAI API', 'RAG', 'BigQuery', 'AWS', 'Docker', 'ETL', 'Scikit-Learn'
     ],
     summary: 'Data Engineer focused on LLM pipelines, RAG architectures, and scalable data infrastructure.',
-    updatedAt: new Date().toISOString()
-  },
-  {
-    id: 'profile-marcus-vance',
-    fullName: 'Marcus Vance',
-    email: 'marcus.vance@example.com',
-    phone: '(555) 456-7890',
-    location: 'Austin, TX (Hybrid)',
-    title: 'Senior DevOps & Cloud Engineer',
-    yearsOfExperience: 6,
-    skills: [
-      'AWS', 'Kubernetes', 'Docker', 'Terraform', 'CI/CD', 'GitHub Actions',
-      'Linux', 'Bash', 'Python', 'Monitoring', 'Nginx', 'Serverless'
-    ],
-    summary: 'Cloud Infrastructure specialist with expertise in multi-region Kubernetes clusters and automated CI/CD.',
     updatedAt: new Date().toISOString()
   }
 ];
