@@ -8,21 +8,17 @@ import UnemploymentLog from './components/UnemploymentLog';
 import AnalyticsDashboard from './components/AnalyticsDashboard';
 import TopJobBoardsBar from './components/TopJobBoardsBar';
 import EmployerFeedManager from './components/EmployerFeedManager';
+import ProfileSelectorModal from './components/ProfileSelectorModal';
 import { searchJobs } from './services/jobApi';
-import { createSampleProfile } from './services/resumeParser';
+import { getActiveProfile, saveProfile, setActiveProfileId } from './services/profileManager';
 import { getWorkSearchLogs, saveWorkSearchLog } from './services/unemploymentLogger';
 import { calculateJobMatch } from './services/jobMatcher';
-import { Search, SlidersHorizontal, Sparkles, Filter, RefreshCw, Target, Building2 } from 'lucide-react';
+import { Search, Sparkles, RefreshCw, UserCheck } from 'lucide-react';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('jobs');
-  const [userProfile, setUserProfile] = useState(() => {
-    const saved = localStorage.getItem('careerpulse_profile');
-    if (saved) {
-      try { return JSON.parse(saved); } catch (e) {}
-    }
-    return createSampleProfile();
-  });
+  const [userProfile, setUserProfile] = useState(() => getActiveProfile());
+  const [showProfileModal, setShowProfileModal] = useState(false);
 
   const [jobs, setJobs] = useState([]);
   const [loadingJobs, setLoadingJobs] = useState(false);
@@ -36,18 +32,24 @@ export default function App() {
 
   const [loggedApplications, setLoggedApplications] = useState([]);
 
-  // Save profile state to localStorage
-  useEffect(() => {
-    try {
-      localStorage.setItem('careerpulse_profile', JSON.stringify(userProfile));
-    } catch (e) {}
-  }, [userProfile]);
+  // Save current profile whenever edited
+  const handleUpdateProfile = (updatedProfile) => {
+    const result = saveProfile(updatedProfile);
+    setUserProfile(result.active);
+  };
+
+  // Switch profile handler
+  const handleSelectProfile = (profile) => {
+    setActiveProfileId(profile.id);
+    setUserProfile(profile);
+    setShowProfileModal(false);
+  };
 
   // Load initial jobs & unemployment logs
   useEffect(() => {
     fetchJobs();
     setLoggedApplications(getWorkSearchLogs());
-  }, []);
+  }, [userProfile]);
 
   const fetchJobs = async () => {
     setLoadingJobs(true);
@@ -58,7 +60,7 @@ export default function App() {
       userSkills: userProfile?.skills || []
     });
 
-    // Sort jobs by Match Score descending
+    // Sort jobs by Match Score descending for the active profile
     const sorted = results.map(job => ({
       ...job,
       computedMatch: calculateJobMatch(job, userProfile)
@@ -92,7 +94,7 @@ export default function App() {
       applicationMethod: 'Online Careers Portal',
       contactPerson: job.contactPerson || 'Hiring Manager',
       contactInfo: job.contactEmail || job.applyUrl,
-      notes: `Applied for ${job.title}. Tailored resume generated.`
+      notes: `Applied for ${job.title}. Tailored resume generated for ${userProfile.fullName}.`
     });
     setLoggedApplications(newLogs);
   };
@@ -117,9 +119,42 @@ export default function App() {
         setActiveTab={setActiveTab} 
         userProfile={userProfile} 
         loggedApplicationsCount={loggedApplications.length}
+        onOpenProfileSelector={() => setShowProfileModal(true)}
       />
 
       <main style={{ flex: 1, maxWidth: '1300px', width: '100%', margin: '0 auto', padding: '32px 24px' }}>
+        {/* Profile Onboarding / Active Context Banner */}
+        <div style={{
+          background: 'rgba(30, 41, 59, 0.4)',
+          border: '1px solid var(--glass-border)',
+          borderRadius: 'var(--radius-lg)',
+          padding: '16px 20px',
+          marginBottom: '24px',
+          display: 'flex',
+          justify: 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: '12px'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'rgba(99, 102, 241, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <UserCheck size={18} color="var(--accent-indigo)" />
+            </div>
+            <div>
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                Active Profile Context
+              </span>
+              <div style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                {userProfile.fullName} — <span style={{ color: 'var(--accent-cyan)' }}>{userProfile.title}</span> ({userProfile.skills?.length || 0} Skills)
+              </div>
+            </div>
+          </div>
+
+          <button className="btn-secondary" onClick={() => setShowProfileModal(true)} style={{ fontSize: '0.82rem', padding: '6px 14px' }}>
+            Switch or Add Profile
+          </button>
+        </div>
+
         {/* Tab 1: Job Search & Skill Matcher */}
         {activeTab === 'jobs' && (
           <div>
@@ -186,10 +221,10 @@ export default function App() {
             {/* Results Counter Banner */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
               <h3 style={{ fontSize: '1.1rem', fontWeight: 700 }}>
-                Matched Openings ({filteredJobs.length})
+                Matched Openings for {userProfile.fullName} ({filteredJobs.length})
               </h3>
               <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                Sorted by Candidate Skill Alignment Score
+                Sorted by Skill Alignment with {userProfile.title}
               </span>
             </div>
 
@@ -197,7 +232,7 @@ export default function App() {
             {loadingJobs ? (
               <div style={{ textAlign: 'center', padding: '60px' }}>
                 <RefreshCw size={32} color="var(--accent-indigo)" className="spin" style={{ margin: '0 auto 16px' }} />
-                <p style={{ color: 'var(--text-secondary)' }}>Aggregating custom employer feeds & remote openings...</p>
+                <p style={{ color: 'var(--text-secondary)' }}>Matching openings against {userProfile.fullName}'s profile...</p>
               </div>
             ) : (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(380px, 1fr))', gap: '24px' }}>
@@ -219,7 +254,7 @@ export default function App() {
 
         {/* Tab 2: Master Resume */}
         {activeTab === 'resume' && (
-          <ResumeUploader userProfile={userProfile} setUserProfile={setUserProfile} />
+          <ResumeUploader userProfile={userProfile} setUserProfile={handleUpdateProfile} />
         )}
 
         {/* Tab 3: Tailor & Cover Letter Studio */}
@@ -252,6 +287,19 @@ export default function App() {
           onTailorJob={handleTailorJob}
           onLogUnemployment={handleQuickLogUnemployment}
           isLogged={isJobLogged(selectedJob.id)}
+        />
+      )}
+
+      {/* Profile Selector Modal */}
+      {showProfileModal && (
+        <ProfileSelectorModal
+          activeProfile={userProfile}
+          onSelectProfile={handleSelectProfile}
+          onCreateNewProfile={() => {
+            setShowProfileModal(false);
+            setActiveTab('resume');
+          }}
+          onClose={() => setShowProfileModal(false)}
         />
       )}
     </div>
