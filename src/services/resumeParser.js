@@ -43,18 +43,19 @@ export function parseResumeText(rawText) {
   // Extract skills by checking presence in text
   const extractedSkills = new Set();
   KNOWN_SKILLS.forEach(skill => {
-    // Regex for word boundary matching
     const escaped = escapeRegExp(skill.toLowerCase());
-    // Handle C# and .NET special regex escaping
     const pattern = `(?:^|\\b|\\s)${escaped}(?:$|\\b|\\s|\\,|\\.|\\;)`;
     const regex = new RegExp(pattern, 'i');
     if (regex.test(textLower)) {
-      // Standardize display name
       extractedSkills.add(standardizeSkillName(skill));
     }
   });
 
-  // Basic title extraction heuristic
+  const skillsList = Array.from(extractedSkills).sort();
+  // Default top 8 extracted skills as core skills (up to 10 max)
+  const coreSkills = skillsList.slice(0, 8);
+
+  // Title extraction
   let detectedTitle = 'Senior Software Engineer';
   const titlePatterns = [
     /senior\s+software\s+engineer/i,
@@ -77,25 +78,21 @@ export function parseResumeText(rawText) {
     }
   }
 
-  // Estimate experience years
   let yearsOfExperience = 5;
   const expMatch = rawText.match(/(\d+)\+?\s*years?\s*(of)?\s*experience/i);
   if (expMatch && expMatch[1]) {
     yearsOfExperience = parseInt(expMatch[1], 10);
   }
 
-  // Extract name (first non-empty line)
   const lines = rawText.split('\n').map(l => l.trim()).filter(Boolean);
   let fullName = 'Tim Forste';
   if (lines.length > 0 && lines[0].length < 35 && !lines[0].includes('@') && !lines[0].toLowerCase().includes('resume')) {
     fullName = lines[0];
   }
 
-  // Extract email & phone
   const emailMatch = rawText.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
   const phoneMatch = rawText.match(/(\+?\d{1,3}[\s-]?)?\(?\d{3}\)?[\s-]?\d{3}[\s-]?\d{4}/);
 
-  // Extract location
   let location = 'Independence, Oregon (Remote Friendly)';
   const locMatch = rawText.match(/([A-Z][a-z]+,\s*(?:Oregon|OR|WA|CA|NY|TX|[A-Z]{2})\s*\d{5}?)/i);
   if (locMatch) {
@@ -110,7 +107,8 @@ export function parseResumeText(rawText) {
     location,
     title: detectedTitle,
     yearsOfExperience,
-    skills: Array.from(extractedSkills).sort(),
+    skills: skillsList,
+    coreSkills: coreSkills,
     summary: rawText.slice(0, 450).trim() + '...',
     rawText: rawText,
     updatedAt: new Date().toISOString()
@@ -118,6 +116,13 @@ export function parseResumeText(rawText) {
 }
 
 export function createSampleProfile() {
+  const allSkills = [
+    'C#', '.NET Core', 'ASP.NET', 'JavaScript', 'TypeScript', 'Node.js', 'NestJS', 
+    'Python', 'PowerShell', 'Azure', 'GCP', 'Docker', 'Kubernetes', 'CI/CD', 
+    'Microservices', 'Event-Driven Architecture', 'RESTful APIs', 'PostgreSQL', 
+    'Oracle', 'Microsoft SQL Server', 'Dapper', 'TDD', 'Jest', 'Datadog', 'Splunk', 'Git'
+  ];
+
   return {
     id: 'profile-tim-forste',
     fullName: 'Tim Forste',
@@ -126,12 +131,8 @@ export function createSampleProfile() {
     location: 'Independence, Oregon (Remote)',
     title: 'Senior Software Engineer',
     yearsOfExperience: 12,
-    skills: [
-      'C#', '.NET Core', 'ASP.NET', 'JavaScript', 'TypeScript', 'Node.js', 'NestJS', 
-      'Python', 'PowerShell', 'Azure', 'GCP', 'Docker', 'Kubernetes', 'CI/CD', 
-      'Microservices', 'Event-Driven Architecture', 'RESTful APIs', 'PostgreSQL', 
-      'Oracle', 'Microsoft SQL Server', 'Dapper', 'TDD', 'Jest', 'Datadog', 'Splunk', 'Git'
-    ],
+    skills: allSkills,
+    coreSkills: ['C#', '.NET Core', 'Azure', 'GCP', 'Microservices', 'Event-Driven Architecture', 'RESTful APIs', 'PostgreSQL', 'Docker', 'Kubernetes'],
     summary: 'Senior Software Engineer with 12+ years of experience specializing in C#, .NET Core, and hybrid-cloud architectures (Azure, GCP). Proven expertise in modernizing legacy systems, architecting event-driven microservices, and integrating enterprise-scale data pipelines.',
     updatedAt: new Date().toISOString()
   };
@@ -146,6 +147,7 @@ function createEmptyProfile() {
     title: 'Job Seeker',
     yearsOfExperience: 0,
     skills: [],
+    coreSkills: [],
     summary: '',
     rawText: '',
     updatedAt: new Date().toISOString()
