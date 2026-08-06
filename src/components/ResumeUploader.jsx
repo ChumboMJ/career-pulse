@@ -13,6 +13,7 @@ import {
   Briefcase,
   FileText
 } from 'lucide-react';
+import mammoth from 'mammoth';
 import { parseResumeText, createSampleProfile, KNOWN_SKILLS } from '../services/resumeParser.js';
 
 export default function ResumeUploader({ userProfile, setUserProfile }) {
@@ -28,14 +29,14 @@ export default function ResumeUploader({ userProfile, setUserProfile }) {
       const parsed = parseResumeText(pasteText);
       setUserProfile(parsed);
       setIsParsing(false);
-      showNotification('Resume parsed successfully! Skills extracted.');
+      showNotification(`Parsed text successfully! ${parsed.skills.length} skills extracted.`);
     }, 400);
   };
 
   const handleLoadSample = () => {
     const sample = createSampleProfile();
     setUserProfile(sample);
-    showNotification('Loaded Sample Resume (Alex Johnson - Senior Software Engineer)');
+    showNotification(`Loaded Sample Resume (Tim Forste - ${sample.title})`);
   };
 
   const handleFileUpload = (e) => {
@@ -43,15 +44,39 @@ export default function ResumeUploader({ userProfile, setUserProfile }) {
     if (!file) return;
 
     setIsParsing(true);
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const content = event.target.result;
-      const parsed = parseResumeText(content);
-      setUserProfile(parsed);
-      setIsParsing(false);
-      showNotification(`Uploaded ${file.name}! Skills extracted.`);
-    };
-    reader.readAsText(file);
+    const fileName = file.name.toLowerCase();
+
+    if (fileName.endsWith('.docx') || fileName.endsWith('.doc')) {
+      // Use mammoth to extract plain text from binary DOCX ArrayBuffer
+      const reader = new FileReader();
+      reader.onload = async (event) => {
+        try {
+          const arrayBuffer = event.target.result;
+          const result = await mammoth.extractRawText({ arrayBuffer });
+          const text = result.value || '';
+          const parsed = parseResumeText(text);
+          setUserProfile(parsed);
+          setIsParsing(false);
+          showNotification(`Uploaded ${file.name}! ${parsed.skills.length} skills extracted.`);
+        } catch (err) {
+          console.error('Error parsing DOCX file', err);
+          setIsParsing(false);
+          alert('Could not parse DOCX binary. Please paste the resume text directly.');
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    } else {
+      // Plain text / Markdown / TXT
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const content = event.target.result;
+        const parsed = parseResumeText(content);
+        setUserProfile(parsed);
+        setIsParsing(false);
+        showNotification(`Uploaded ${file.name}! ${parsed.skills.length} skills extracted.`);
+      };
+      reader.readAsText(file);
+    }
   };
 
   const handleAddSkill = () => {
@@ -75,7 +100,7 @@ export default function ResumeUploader({ userProfile, setUserProfile }) {
 
   const showNotification = (msg) => {
     setNotification(msg);
-    setTimeout(() => setNotification(null), 3000);
+    setTimeout(() => setNotification(null), 3500);
   };
 
   return (
@@ -106,7 +131,7 @@ export default function ResumeUploader({ userProfile, setUserProfile }) {
             <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Extract skills & experience automatically</p>
           </div>
           <button className="btn-secondary" onClick={handleLoadSample} style={{ fontSize: '0.8rem', padding: '6px 12px' }}>
-            <Sparkles size={14} /> Load Demo Resume
+            <Sparkles size={14} /> Load Tim Forste Resume
           </button>
         </div>
 
@@ -137,16 +162,16 @@ export default function ResumeUploader({ userProfile, setUserProfile }) {
             background: 'rgba(99, 102, 241, 0.15)',
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'center',
+            justify: 'center',
             margin: '0 auto 12px'
           }}>
             <FileUp size={24} color="var(--accent-indigo)" />
           </div>
           <h4 style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-            Click to upload your resume file
+            Click to upload your resume file (.docx, .pdf, .txt)
           </h4>
           <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-            Supports PDF, TXT, DOCX, Markdown
+            Supports Word DOCX, PDF, TXT, Markdown
           </p>
         </div>
 
@@ -157,7 +182,7 @@ export default function ResumeUploader({ userProfile, setUserProfile }) {
           </label>
           <textarea
             className="input-field"
-            rows={7}
+            rows={8}
             placeholder="Paste your raw resume summary, work history, and skills list here..."
             value={pasteText}
             onChange={(e) => setPasteText(e.target.value)}
@@ -232,7 +257,7 @@ export default function ResumeUploader({ userProfile, setUserProfile }) {
             <input 
               type="text" 
               className="input-field" 
-              placeholder="Add skill (e.g. React, Python, AWS)..." 
+              placeholder="Add skill (e.g. C#, .NET Core, Azure, React)..." 
               value={newSkillInput} 
               onChange={(e) => setNewSkillInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleAddSkill()}

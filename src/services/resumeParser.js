@@ -1,33 +1,33 @@
-// Resume Parser & Skill Extraction Engine
+// Comprehensive Resume Parser & Skill Extraction Engine
 
-// Comprehensive taxonomy of tech & professional skills
 export const KNOWN_SKILLS = [
-  // Programming & Dev
-  'JavaScript', 'TypeScript', 'React', 'Node.js', 'Python', 'Java', 'C++', 'C#', 'Go', 'Rust', 'Ruby',
-  'PHP', 'HTML5', 'CSS3', 'Sass', 'TailwindCSS', 'Vue.js', 'Angular', 'Next.js', 'Vite', 'Express',
-  'Django', 'Flask', 'FastAPI', 'Spring Boot', 'GraphQL', 'REST API', 'Microservices',
+  // Languages & Frameworks
+  'C#', '.NET', '.NET Core', 'ASP.NET', 'VB.NET', 'JavaScript', 'TypeScript', 'Node.js', 'NestJS', 
+  'Python', 'PowerShell', 'React', 'Vue.js', 'Angular', 'Next.js', 'Express', 'Django', 'Flask', 
+  'FastAPI', 'Java', 'C++', 'Go', 'Rust', 'Ruby', 'PHP', 'HTML5', 'CSS3', 'Sass', 'TailwindCSS', 
+  'Kendo UI', 'jQuery',
 
-  // Cloud & DevOps
-  'AWS', 'Google Cloud', 'Azure', 'Docker', 'Kubernetes', 'Terraform', 'CI/CD', 'GitHub Actions',
-  'Linux', 'Bash', 'Nginx', 'Monitoring', 'Serverless',
+  // Cloud, Containers & DevOps
+  'Azure', 'Microsoft Azure', 'GCP', 'Google Cloud', 'AWS', 'Docker', 'Kubernetes', 'GKE', 
+  'Pub/Sub', 'Terraform', 'Azure DevOps', 'GitLab', 'CI/CD', 'GitHub Actions', 'Linux', 'WSL', 
+  'Bash', 'Nginx', 'Monitoring', 'Serverless', 'App Service', 'Key Vault',
 
-  // Data & AI / ML
-  'SQL', 'PostgreSQL', 'MySQL', 'MongoDB', 'Redis', 'BigQuery', 'Snowflake', 'Pandas', 'NumPy',
-  'Scikit-Learn', 'PyTorch', 'TensorFlow', 'OpenAI API', 'LLMs', 'Prompt Engineering', 'RAG',
-  'Data Visualization', 'Tableau', 'Power BI', 'Etl',
+  // Architecture, APIs & Security
+  'Microservices', 'Event-Driven Architecture', 'RESTful APIs', 'REST API', 'GraphQL', 
+  'SOLID Principles', 'Dependency Injection', 'MVC', 'MVVM', 'Service Bus', 'JWT', 'OAuth',
 
-  // Product & Project Management
-  'Agile', 'Scrum', 'Kanban', 'Jira', 'Product Management', 'Roadmapping', 'User Stories',
-  'A/B Testing', 'Stakeholder Management', 'Sprint Planning',
+  // Databases, ORM & Data
+  'PostgreSQL', 'Oracle', 'Microsoft SQL Server', 'SQL Server', 'Azure Cosmos DB', 'Cosmos DB', 
+  'MSDB', 'SQL', 'MongoDB', 'Redis', 'Dapper', 'Dapper ORM', 'Entity Framework', 'Snowflake', 
+  'BigQuery', 'Pandas', 'NumPy', 'XML', 'ETL',
 
-  // Design & UX
-  'Figma', 'UI/UX Design', 'Wireframing', 'Prototyping', 'Design Systems', 'User Research',
-  'Adobe XD', 'Photoshop', 'Illustrator',
+  // Tools, Testing & AI
+  'TDD', 'Test-Driven Development', 'xUnit', 'NUnit', 'Jest', 'Datadog', 'Splunk', 'Git', 
+  'Postman', 'VS Code', 'Visual Studio', 'Jira', 'Confluence', 'Draw.io', 'Google Gemini CLI', 
+  'Google Gemini', 'GitHub Copilot', 'OpenAI API', 'LLMs', 'RAG',
 
-  // Business & Marketing & Soft Skills
-  'SEO', 'Content Strategy', 'Google Analytics', 'Digital Marketing', 'Copywriting',
-  'Communication', 'Leadership', 'Problem Solving', 'Customer Support', 'Salesforce',
-  'Negotiation', 'Financial Analysis', 'Budgeting'
+  // Methodologies & SDLC
+  'Agile', 'Scrum', 'Kanban', 'Code Reviews', 'Pair Programming'
 ];
 
 /**
@@ -44,25 +44,29 @@ export function parseResumeText(rawText) {
   const extractedSkills = new Set();
   KNOWN_SKILLS.forEach(skill => {
     // Regex for word boundary matching
-    const regex = new RegExp(`\\b${escapeRegExp(skill.toLowerCase())}\\b`, 'i');
+    const escaped = escapeRegExp(skill.toLowerCase());
+    // Handle C# and .NET special regex escaping
+    const pattern = `(?:^|\\b|\\s)${escaped}(?:$|\\b|\\s|\\,|\\.|\\;)`;
+    const regex = new RegExp(pattern, 'i');
     if (regex.test(textLower)) {
-      extractedSkills.add(skill);
+      // Standardize display name
+      extractedSkills.add(standardizeSkillName(skill));
     }
   });
 
   // Basic title extraction heuristic
-  let detectedTitle = 'Software Engineer / Professional';
+  let detectedTitle = 'Senior Software Engineer';
   const titlePatterns = [
+    /senior\s+software\s+engineer/i,
     /senior\s+[a-z\s]+engineer/i,
-    /frontend\s+developer/i,
+    /it\s+applications\s+engineer/i,
     /full\s*stack\s+developer/i,
+    /frontend\s+developer/i,
     /backend\s+engineer/i,
-    /data\s+scientist/i,
-    /product\s+manager/i,
-    /ui\/ux\s+designer/i,
     /devops\s+engineer/i,
-    /software\s+engineer/i,
-    /marketing\s+manager/i
+    /data\s+engineer/i,
+    /software\s+architect/i,
+    /software\s+developer/i
   ];
 
   for (const pattern of titlePatterns) {
@@ -74,25 +78,40 @@ export function parseResumeText(rawText) {
   }
 
   // Estimate experience years
-  let yearsOfExperience = 3;
+  let yearsOfExperience = 5;
   const expMatch = rawText.match(/(\d+)\+?\s*years?\s*(of)?\s*experience/i);
   if (expMatch && expMatch[1]) {
     yearsOfExperience = parseInt(expMatch[1], 10);
+  }
+
+  // Extract name (first non-empty line)
+  const lines = rawText.split('\n').map(l => l.trim()).filter(Boolean);
+  let fullName = 'Tim Forste';
+  if (lines.length > 0 && lines[0].length < 35 && !lines[0].includes('@') && !lines[0].toLowerCase().includes('resume')) {
+    fullName = lines[0];
   }
 
   // Extract email & phone
   const emailMatch = rawText.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
   const phoneMatch = rawText.match(/(\+?\d{1,3}[\s-]?)?\(?\d{3}\)?[\s-]?\d{3}[\s-]?\d{4}/);
 
+  // Extract location
+  let location = 'Independence, Oregon (Remote Friendly)';
+  const locMatch = rawText.match(/([A-Z][a-z]+,\s*(?:Oregon|OR|WA|CA|NY|TX|[A-Z]{2})\s*\d{5}?)/i);
+  if (locMatch) {
+    location = locMatch[0];
+  }
+
   return {
-    fullName: extractName(rawText) || 'Alex Johnson',
-    email: emailMatch ? emailMatch[0] : 'alex.johnson@example.com',
-    phone: phoneMatch ? phoneMatch[0] : '(555) 234-5678',
-    location: 'San Francisco, CA (Open to Remote)',
+    id: `profile-${Date.now()}`,
+    fullName,
+    email: emailMatch ? emailMatch[0] : 'tforste@gmail.com',
+    phone: phoneMatch ? phoneMatch[0] : '971-600-4205',
+    location,
     title: detectedTitle,
     yearsOfExperience,
     skills: Array.from(extractedSkills).sort(),
-    summary: rawText.slice(0, 350).trim() + '...',
+    summary: rawText.slice(0, 450).trim() + '...',
     rawText: rawText,
     updatedAt: new Date().toISOString()
   };
@@ -100,42 +119,20 @@ export function parseResumeText(rawText) {
 
 export function createSampleProfile() {
   return {
-    fullName: 'Alex Johnson',
-    email: 'alex.johnson@example.com',
-    phone: '(555) 234-5678',
-    location: 'San Francisco, CA (Remote Friendly)',
-    title: 'Senior Full Stack Software Engineer',
-    yearsOfExperience: 5,
+    id: 'profile-tim-forste',
+    fullName: 'Tim Forste',
+    email: 'tforste@gmail.com',
+    phone: '971-600-4205',
+    location: 'Independence, Oregon (Remote)',
+    title: 'Senior Software Engineer',
+    yearsOfExperience: 12,
     skills: [
-      'JavaScript', 'TypeScript', 'React', 'Node.js', 'Python', 'REST API',
-      'GraphQL', 'PostgreSQL', 'Docker', 'AWS', 'Git', 'Agile', 'CI/CD',
-      'HTML5', 'CSS3', 'TailwindCSS', 'Jest', 'Problem Solving'
+      'C#', '.NET Core', 'ASP.NET', 'JavaScript', 'TypeScript', 'Node.js', 'NestJS', 
+      'Python', 'PowerShell', 'Azure', 'GCP', 'Docker', 'Kubernetes', 'CI/CD', 
+      'Microservices', 'Event-Driven Architecture', 'RESTful APIs', 'PostgreSQL', 
+      'Oracle', 'Microsoft SQL Server', 'Dapper', 'TDD', 'Jest', 'Datadog', 'Splunk', 'Git'
     ],
-    summary: 'Versatile Full Stack Engineer with 5+ years of experience building high-performance web applications using React, Node.js, and Cloud services. Track record of scaling SaaS platforms and optimizing frontend bundle performance.',
-    experience: [
-      {
-        company: 'TechFlow Solutions',
-        role: 'Senior Frontend Engineer',
-        period: '2022 - Present',
-        bullets: [
-          'Architected responsive React/TypeScript frontend supporting 100k+ active monthly users.',
-          'Reduced LCP page load times by 42% through lazy-loading, code-splitting, and memoization.',
-          'Mentored junior engineers and led daily agile standups.'
-        ]
-      },
-      {
-        company: 'CloudPulse Inc.',
-        role: 'Full Stack Engineer',
-        period: '2019 - 2022',
-        bullets: [
-          'Developed microservices with Node.js, Express, and PostgreSQL.',
-          'Integrated REST APIs and payment gateways processing $2M+ in transactions annually.',
-          'Configured CI/CD pipelines via GitHub Actions and Docker.'
-        ]
-      }
-    ],
-    education: 'B.S. in Computer Science - University of California (2019)',
-    rawText: 'Alex Johnson - Senior Full Stack Software Engineer with React, Node.js, TypeScript, Python, AWS, PostgreSQL experience.',
+    summary: 'Senior Software Engineer with 12+ years of experience specializing in C#, .NET Core, and hybrid-cloud architectures (Azure, GCP). Proven expertise in modernizing legacy systems, architecting event-driven microservices, and integrating enterprise-scale data pipelines.',
     updatedAt: new Date().toISOString()
   };
 }
@@ -163,10 +160,10 @@ function capitalizeWords(str) {
   return str.replace(/\w\S*/g, (txt) => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase());
 }
 
-function extractName(text) {
-  const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
-  if (lines.length > 0 && lines[0].length < 35 && !lines[0].includes('@')) {
-    return lines[0];
-  }
-  return null;
+function standardizeSkillName(skill) {
+  if (skill.toLowerCase() === 'microsoft azure') return 'Azure';
+  if (skill.toLowerCase() === 'google cloud' || skill.toLowerCase() === 'gcp') return 'GCP';
+  if (skill.toLowerCase() === 'test-driven development') return 'TDD';
+  if (skill.toLowerCase() === 'rest api') return 'RESTful APIs';
+  return skill;
 }

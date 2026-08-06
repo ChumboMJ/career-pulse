@@ -1,6 +1,8 @@
-// Job Aggregator & Real-Time API Service
+// Job Aggregator & Real-Time API Service (Multi-Source + Employer Feeds + Top 5 Boards)
 
-// Real job sample database with rich metadata
+import { getSavedEmployerFeeds, fetchEmployerJobs } from './employerFeeds.js';
+
+// Curated base database
 const CURATED_JOBS = [
   {
     id: 'job-101',
@@ -65,13 +67,8 @@ Requirements:
     salary: '$170,000 - $220,000 / year',
     postedDate: '3 days ago',
     requiredSkills: ['Python', 'SQL', 'LLMs', 'PyTorch', 'Pandas', 'AWS', 'Docker', 'OpenAI API', 'RAG'],
-    description: `We are seeking an AI / Data Engineer to build enterprise RAG pipelines, fine-tune models, and manage large-scale data ingestion pipelines for generative AI agents.
-
-Key Requirements:
-• Expert knowledge of Python, SQL, Pandas, and vector databases (Pinecone, PGVector).
-• Hands-on experience integrating LLM APIs (OpenAI, Anthropic, Gemini) into production apps.
-• Experience building ETL pipelines and deploying containerized services via Docker & Kubernetes.`,
-    applyUrl: 'https://example.com/ai-jobs',
+    description: `We are seeking an AI / Data Engineer to build enterprise RAG pipelines, fine-tune models, and manage large-scale data ingestion pipelines for generative AI agents.`,
+    applyUrl: 'https://openai.com/careers',
     contactPerson: 'David Ross (Engineering Lead)',
     contactEmail: 'd.ross@aiproductions.io'
   },
@@ -86,12 +83,7 @@ Key Requirements:
     salary: '$160,000 - $200,000 / year',
     postedDate: 'Just posted',
     requiredSkills: ['AWS', 'Kubernetes', 'Docker', 'Terraform', 'CI/CD', 'Linux', 'Python', 'Monitoring'],
-    description: `Datadog is looking for a DevOps & Infrastructure Engineer to scale our multi-region Kubernetes clusters and automated deployment infrastructure.
-
-Key Tasks:
-• Maintain infrastructure as code using Terraform across AWS and GCP.
-• Build reliable CI/CD deployment automation using GitHub Actions and ArgoCD.
-• Enhance system telemetry, latency metrics, and incident recovery response.`,
+    description: `Datadog is looking for a DevOps & Infrastructure Engineer to scale our multi-region Kubernetes clusters and automated deployment infrastructure.`,
     applyUrl: 'https://datadoghq.com/careers',
     contactPerson: 'Emily Turner (Recruiter)',
     contactEmail: 'eturner@datadoghq.com'
@@ -131,18 +123,35 @@ Key Tasks:
 ];
 
 /**
- * Searches jobs with filters and optional live remote job API fetch
+ * Aggregates jobs from Live APIs, Custom Employer Feeds, and Curated Repositories
  */
-export async function searchJobs({ query = '', remoteOnly = false, minSalary = 0, requiredSkill = '' }) {
-  let results = [...CURATED_JOBS];
+export async function searchJobs({ query = '', remoteOnly = false, includeEmployerFeeds = true, userSkills = [] }) {
+  let aggregated = [...CURATED_JOBS];
 
-  // Attempt live fetch from Remotive API if available
+  // 1. Fetch from Custom Employer Feeds (Greenhouse, Lever, etc.)
+  if (includeEmployerFeeds) {
+    try {
+      const employerFeeds = getSavedEmployerFeeds().filter(f => f.active);
+      const employerPromises = employerFeeds.map(feed => fetchEmployerJobs(feed));
+      const employerResults = await Promise.allSettled(employerPromises);
+
+      employerResults.forEach(res => {
+        if (res.status === 'fulfilled' && Array.isArray(res.value)) {
+          aggregated = [...res.value, ...aggregated];
+        }
+      });
+    } catch (e) {
+      console.error('Error fetching custom employer feeds', e);
+    }
+  }
+
+  // 2. Fetch from Remotive / Live Job Feeds
   try {
-    const apiRes = await fetch('https://remotive.com/api/remote-jobs?limit=15', { signal: AbortSignal.timeout(3000) });
+    const apiRes = await fetch('https://remotive.com/api/remote-jobs?limit=12', { signal: AbortSignal.timeout(3000) });
     if (apiRes.ok) {
       const data = await apiRes.json();
       if (data.jobs && Array.isArray(data.jobs)) {
-        const liveJobs = data.jobs.slice(0, 10).map(j => ({
+        const liveJobs = data.jobs.slice(0, 8).map(j => ({
           id: `remotive-${j.id}`,
           title: j.title,
           company: j.company_name,
@@ -150,30 +159,34 @@ export async function searchJobs({ query = '', remoteOnly = false, minSalary = 0
           location: j.candidate_required_location || 'Remote Worldwide',
           remote: true,
           type: j.job_type || 'Full-time',
-          salary: j.salary || '$120,000 - $160,000 / year',
-          postedDate: 'Recent',
+          salary: j.salary || '$125,000 - $165,000 / year',
+          postedDate: 'Live Feed',
           requiredSkills: j.tags && j.tags.length > 0 ? j.tags : ['JavaScript', 'Python', 'React', 'Git'],
-          description: stripHtml(j.description).slice(0, 1500),
+          description: stripHtml(j.description).slice(0, 1200),
           applyUrl: j.url,
           contactPerson: 'Hiring Team',
           contactEmail: `careers@${j.company_name.toLowerCase().replace(/[^a-z0-9]/g, '')}.com`
         }));
 
-        // Merge live jobs with curated dataset
-        results = [...liveJobs, ...results];
+        aggregated = [...liveJobs, ...aggregated];
       }
     }
   } catch (err) {
-    // Graceful fallback to curated database if network request fails or times out
-    console.log('Using curated job dataset');
+    console.log('Using aggregated employer & curated job pool');
   }
 
-  // Filter logic
+  // Deduplicate by ID
+  const uniqueMap = new Map();
+  aggregated.forEach(job => uniqueMap.set(job.id, job));
+  let results = Array.from(uniqueMap.values());
+
+  // Apply Search Filters
   if (query) {
     const qLower = query.toLowerCase();
     results = results.filter(j => 
       j.title.toLowerCase().includes(qLower) ||
       j.company.toLowerCase().includes(qLower) ||
+      j.requiredSkills.some(s => s.toLowerCase().includes(qLower)) ||
       j.description.toLowerCase().includes(qLower)
     );
   }
@@ -182,19 +195,53 @@ export async function searchJobs({ query = '', remoteOnly = false, minSalary = 0
     results = results.filter(j => j.remote);
   }
 
-  if (requiredSkill) {
-    const sLower = requiredSkill.toLowerCase();
-    results = results.filter(j => 
-      j.requiredSkills.some(s => s.toLowerCase().includes(sLower)) ||
-      j.description.toLowerCase().includes(sLower)
-    );
-  }
-
   return results;
 }
 
 /**
- * Direct web search URL helper for LinkedIn, Google Jobs, Indeed
+ * Direct search URL generator for the Top 5 Job Boards (LinkedIn, Indeed, Glassdoor, ZipRecruiter, Google Jobs)
+ */
+export function generateTop5BoardUrls(title = 'Software Engineer', skills = [], location = 'Remote') {
+  const primarySkills = (skills || []).slice(0, 3).join(' ');
+  const fullKeywords = encodeURIComponent(`${title} ${primarySkills}`.trim());
+  const encLoc = encodeURIComponent(location);
+
+  return [
+    {
+      name: 'LinkedIn Jobs',
+      url: `https://www.linkedin.com/jobs/search/?keywords=${fullKeywords}&location=${encLoc}`,
+      color: '#0a66c2',
+      badge: 'Top Tech & Business'
+    },
+    {
+      name: 'Indeed',
+      url: `https://www.indeed.com/jobs?q=${fullKeywords}&l=${encLoc}`,
+      color: '#2164f3',
+      badge: 'Highest Volume'
+    },
+    {
+      name: 'Glassdoor',
+      url: `https://www.glassdoor.com/Job/jobs.htm?sc.keyword=${fullKeywords}`,
+      color: '#0caa41',
+      badge: 'Salaries & Reviews'
+    },
+    {
+      name: 'ZipRecruiter',
+      url: `https://www.ziprecruiter.com/candidate/search?search=${fullKeywords}&location=${encLoc}`,
+      color: '#00a3e0',
+      badge: '1-Click Apply'
+    },
+    {
+      name: 'Google Jobs',
+      url: `https://www.google.com/search?q=${fullKeywords}+jobs+in+${encLoc}&ibp=htl;jobs`,
+      color: '#ea4335',
+      badge: 'Google Aggregator'
+    }
+  ];
+}
+
+/**
+ * Legacy URL helper for backward compatibility
  */
 export function generateExternalSearchUrls(title, location = 'Remote') {
   const encTitle = encodeURIComponent(title || 'Software Engineer');

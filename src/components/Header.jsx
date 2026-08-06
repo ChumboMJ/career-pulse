@@ -5,12 +5,12 @@ import {
   Wand2, 
   ShieldCheck, 
   BarChart3, 
-  CheckCircle2,
   Sparkles,
-  UserCheck
+  UserCheck,
+  ChevronDown
 } from 'lucide-react';
 
-export default function Header({ activeTab, setActiveTab, userProfile, loggedApplicationsCount }) {
+export default function Header({ activeTab, setActiveTab, userProfile, loggedApplicationsCount, onOpenProfileSelector }) {
   const tabs = [
     { id: 'jobs', label: 'Job Search & Match', icon: Briefcase },
     { id: 'resume', label: 'Master Resume', icon: FileText },
@@ -33,10 +33,10 @@ export default function Header({ activeTab, setActiveTab, userProfile, loggedApp
       <div style={{
         maxWidth: '1300px',
         margin: '0 auto',
-        padding: '16px 24px',
+        padding: '14px 24px',
         display: 'flex',
         alignItems: 'center',
-        justifyContent: 'space-between',
+        justify: 'space-between',
         flexWrap: 'wrap',
         gap: '16px'
       }}>
@@ -49,7 +49,7 @@ export default function Header({ activeTab, setActiveTab, userProfile, loggedApp
             background: 'var(--gradient-brand)',
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'center',
+            justify: 'center',
             boxShadow: '0 4px 15px rgba(99, 102, 241, 0.4)'
           }}>
             <Sparkles size={24} color="#fff" />
@@ -119,28 +119,33 @@ export default function Header({ activeTab, setActiveTab, userProfile, loggedApp
           })}
         </nav>
 
-        {/* User Mini Profile Quick Bar */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <div style={{
+        {/* Active Profile Quick Switcher */}
+        <button
+          onClick={onOpenProfileSelector}
+          style={{
             display: 'flex',
             alignItems: 'center',
             gap: '10px',
-            background: 'rgba(30, 41, 59, 0.4)',
+            background: 'rgba(30, 41, 59, 0.6)',
             padding: '6px 14px',
             borderRadius: 'var(--radius-md)',
-            border: '1px solid var(--glass-border)'
-          }}>
-            <UserCheck size={18} color="var(--accent-emerald)" />
-            <div style={{ fontSize: '0.8rem' }}>
-              <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
-                {userProfile?.fullName || 'User Profile'}
-              </div>
-              <div style={{ color: 'var(--text-muted)', fontSize: '0.72rem' }}>
-                {skillCount} Skills Loaded
-              </div>
+            border: '1px solid var(--glass-border)',
+            cursor: 'pointer',
+            transition: 'all 0.2s ease'
+          }}
+          title="Click to switch candidate profile"
+        >
+          <UserCheck size={18} color="var(--accent-emerald)" />
+          <div style={{ fontSize: '0.8rem', textAlign: 'left' }}>
+            <div style={{ fontWeight: 600, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+              {userProfile?.fullName || 'User Profile'}
+              <ChevronDown size={14} color="var(--text-muted)" />
+            </div>
+            <div style={{ color: 'var(--text-muted)', fontSize: '0.72rem' }}>
+              {skillCount} Skills • {userProfile?.title ? userProfile.title.slice(0, 20) + '...' : 'Profile'}
             </div>
           </div>
-        </div>
+        </button>
       </div>
     </header>
   );
