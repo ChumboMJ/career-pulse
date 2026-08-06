@@ -7,9 +7,9 @@ import {
   XCircle, 
   Wand2, 
   ShieldCheck, 
-  ExternalLink,
   ChevronRight,
-  Sparkles
+  Sparkles,
+  Star
 } from 'lucide-react';
 import { calculateJobMatch } from '../services/jobMatcher.js';
 
@@ -29,7 +29,7 @@ export default function JobCard({ job, userProfile, onSelectJob, onTailorJob, on
         padding: '24px',
         display: 'flex',
         flexDirection: 'column',
-        justifyContent: 'space-between',
+        justify: 'space-between',
         position: 'relative',
         transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
         overflow: 'hidden'
@@ -79,10 +79,10 @@ export default function JobCard({ job, userProfile, onSelectJob, onTailorJob, on
           <div style={{ textAlign: 'right', flexShrink: 0 }}>
             <div className={`badge ${badgeClass}`} style={{ fontSize: '0.9rem', padding: '6px 12px' }}>
               <Sparkles size={14} />
-              {score}% Skill Match
+              {score}% Match
             </div>
             <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-              Grade {match.grade} Alignment
+              Grade {match.grade} Weighted Score
             </div>
           </div>
         </div>
@@ -110,8 +110,26 @@ export default function JobCard({ job, userProfile, onSelectJob, onTailorJob, on
             Skill Gap Breakdown ({match.matchedSkills.length}/{match.totalRequiredCount} Matched)
           </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-            {match.matchedSkills.slice(0, 5).map((skill, idx) => (
-              <span key={idx} style={{
+            {/* Matched Core Skills (Gold) */}
+            {(match.matchedCoreSkills || []).map((skill, idx) => (
+              <span key={`core-${idx}`} style={{
+                fontSize: '0.75rem',
+                background: 'rgba(245, 158, 11, 0.2)',
+                color: '#fcd34d',
+                border: '1px solid rgba(245, 158, 11, 0.4)',
+                padding: '3px 8px',
+                borderRadius: '6px',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px',
+                fontWeight: 600
+              }}>
+                <Star size={11} fill="#fcd34d" /> Core: {skill}
+              </span>
+            ))}
+            {/* Matched Secondary Skills (Emerald) */}
+            {(match.matchedSecondarySkills || []).map((skill, idx) => (
+              <span key={`sec-${idx}`} style={{
                 fontSize: '0.75rem',
                 background: 'rgba(16, 185, 129, 0.15)',
                 color: '#6ee7b7',
@@ -125,8 +143,9 @@ export default function JobCard({ job, userProfile, onSelectJob, onTailorJob, on
                 <CheckCircle2 size={11} /> {skill}
               </span>
             ))}
+            {/* Missing Skills */}
             {match.missingSkills.slice(0, 3).map((skill, idx) => (
-              <span key={idx} style={{
+              <span key={`miss-${idx}`} style={{
                 fontSize: '0.75rem',
                 background: 'rgba(244, 63, 94, 0.12)',
                 color: '#fda4af',

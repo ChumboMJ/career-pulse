@@ -11,7 +11,8 @@ import {
   Phone, 
   MapPin, 
   Briefcase,
-  FileText
+  FileText,
+  Star
 } from 'lucide-react';
 import mammoth from 'mammoth';
 import { parseResumeText, createSampleProfile, KNOWN_SKILLS } from '../services/resumeParser.js';
@@ -21,6 +22,9 @@ export default function ResumeUploader({ userProfile, setUserProfile }) {
   const [newSkillInput, setNewSkillInput] = useState('');
   const [isParsing, setIsParsing] = useState(false);
   const [notification, setNotification] = useState(null);
+
+  const coreSkills = userProfile.coreSkills || [];
+  const allSkills = userProfile.skills || [];
 
   const handleTextParse = () => {
     if (!pasteText.trim()) return;
@@ -36,7 +40,7 @@ export default function ResumeUploader({ userProfile, setUserProfile }) {
   const handleLoadSample = () => {
     const sample = createSampleProfile();
     setUserProfile(sample);
-    showNotification(`Loaded Sample Resume (Tim Forste - ${sample.title})`);
+    showNotification(`Loaded Sample Resume (${sample.fullName} - ${sample.title})`);
   };
 
   const handleFileUpload = (e) => {
@@ -47,7 +51,6 @@ export default function ResumeUploader({ userProfile, setUserProfile }) {
     const fileName = file.name.toLowerCase();
 
     if (fileName.endsWith('.docx') || fileName.endsWith('.doc')) {
-      // Use mammoth to extract plain text from binary DOCX ArrayBuffer
       const reader = new FileReader();
       reader.onload = async (event) => {
         try {
@@ -66,7 +69,6 @@ export default function ResumeUploader({ userProfile, setUserProfile }) {
       };
       reader.readAsArrayBuffer(file);
     } else {
-      // Plain text / Markdown / TXT
       const reader = new FileReader();
       reader.onload = (event) => {
         const content = event.target.result;
@@ -79,13 +81,40 @@ export default function ResumeUploader({ userProfile, setUserProfile }) {
     }
   };
 
-  const handleAddSkill = () => {
-    if (!newSkillInput.trim()) return;
-    const current = userProfile.skills || [];
-    if (!current.includes(newSkillInput.trim())) {
+  const handleToggleCoreSkill = (skill) => {
+    const isCore = coreSkills.includes(skill);
+    if (isCore) {
+      // Remove from core skills
       setUserProfile({
         ...userProfile,
-        skills: [...current, newSkillInput.trim()].sort()
+        coreSkills: coreSkills.filter(s => s !== skill)
+      });
+    } else {
+      // Add to core skills if under max 10
+      if (coreSkills.length >= 10) {
+        alert('You can select a maximum of 10 Core Skills. Unstar another skill first.');
+        return;
+      }
+      setUserProfile({
+        ...userProfile,
+        coreSkills: [...coreSkills, skill]
+      });
+    }
+  };
+
+  const handleAddSkill = () => {
+    if (!newSkillInput.trim()) return;
+    const sName = newSkillInput.trim();
+    if (!allSkills.includes(sName)) {
+      const updatedSkills = [...allSkills, sName].sort();
+      let updatedCore = coreSkills;
+      if (coreSkills.length < 10) {
+        updatedCore = [...coreSkills, sName];
+      }
+      setUserProfile({
+        ...userProfile,
+        skills: updatedSkills,
+        coreSkills: updatedCore
       });
       setNewSkillInput('');
     }
@@ -94,7 +123,8 @@ export default function ResumeUploader({ userProfile, setUserProfile }) {
   const handleRemoveSkill = (skillToRemove) => {
     setUserProfile({
       ...userProfile,
-      skills: (userProfile.skills || []).filter(s => s !== skillToRemove)
+      skills: allSkills.filter(s => s !== skillToRemove),
+      coreSkills: coreSkills.filter(s => s !== skillToRemove)
     });
   };
 
@@ -200,12 +230,17 @@ export default function ResumeUploader({ userProfile, setUserProfile }) {
         </div>
       </div>
 
-      {/* Right Column: Parsed Master Profile & Skill Tag Editor */}
+      {/* Right Column: Parsed Master Profile & Core Skill Selector */}
       <div className="glass-panel" style={{ padding: '24px' }}>
-        <h2 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '4px' }}>Master Candidate Profile</h2>
-        <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '20px' }}>
-          Refine your extracted skills and personal details
-        </p>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+          <div>
+            <h2 style={{ fontSize: '1.25rem', fontWeight: 700 }}>Master Candidate Profile</h2>
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Refine skills & mark up to 10 Core Skills</p>
+          </div>
+          <div className="badge badge-amber" style={{ fontSize: '0.82rem', padding: '6px 12px' }}>
+            <Star size={14} fill="currentColor" /> Core Skills: {coreSkills.length} / 10
+          </div>
+        </div>
 
         {/* Profile Info Fields */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '20px' }}>
@@ -250,14 +285,19 @@ export default function ResumeUploader({ userProfile, setUserProfile }) {
         {/* Skill Tag Manager */}
         <div style={{ marginBottom: '20px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-            <h3 style={{ fontSize: '0.95rem', fontWeight: 600 }}>Extracted Skill Taxonomy ({userProfile.skills?.length || 0})</h3>
+            <h3 style={{ fontSize: '0.95rem', fontWeight: 600 }}>
+              Skill Taxonomy ({allSkills.length} Total Skills)
+            </h3>
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+              Click ⭐ on a skill to mark it as a Core Skill (2.0x match weight)
+            </span>
           </div>
 
           <div style={{ display: 'flex', gap: '8px', marginBottom: '14px' }}>
             <input 
               type="text" 
               className="input-field" 
-              placeholder="Add skill (e.g. C#, .NET Core, Azure, React)..." 
+              placeholder="Add new skill (e.g. C#, .NET Core, Azure)..." 
               value={newSkillInput} 
               onChange={(e) => setNewSkillInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleAddSkill()}
@@ -268,24 +308,36 @@ export default function ResumeUploader({ userProfile, setUserProfile }) {
           </div>
 
           {/* Skill Tag Pills */}
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', maxHeight: '220px', overflowY: 'auto', padding: '4px' }}>
-            {(userProfile.skills || []).map((skill, idx) => (
-              <span key={idx} style={{
-                background: 'rgba(99, 102, 241, 0.15)',
-                color: '#a5b4fc',
-                border: '1px solid rgba(99, 102, 241, 0.3)',
-                padding: '4px 10px',
-                borderRadius: '9999px',
-                fontSize: '0.82rem',
-                fontWeight: 500,
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px'
-              }}>
-                {skill}
-                <X size={13} style={{ cursor: 'pointer' }} onClick={() => handleRemoveSkill(skill)} />
-              </span>
-            ))}
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', maxHeight: '240px', overflowY: 'auto', padding: '4px' }}>
+            {allSkills.map((skill, idx) => {
+              const isCore = coreSkills.includes(skill);
+              return (
+                <span key={idx} style={{
+                  background: isCore ? 'rgba(245, 158, 11, 0.2)' : 'rgba(99, 102, 241, 0.15)',
+                  color: isCore ? '#fcd34d' : '#a5b4fc',
+                  border: isCore ? '1px solid rgba(245, 158, 11, 0.4)' : '1px solid rgba(99, 102, 241, 0.3)',
+                  padding: '4px 10px',
+                  borderRadius: '9999px',
+                  fontSize: '0.82rem',
+                  fontWeight: isCore ? 600 : 500,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  transition: 'all 0.2s ease'
+                }}>
+                  <Star 
+                    size={13} 
+                    fill={isCore ? '#fcd34d' : 'transparent'} 
+                    color={isCore ? '#fcd34d' : 'var(--text-muted)'} 
+                    style={{ cursor: 'pointer' }}
+                    onClick={() => handleToggleCoreSkill(skill)}
+                    title={isCore ? 'Unmark as Core Skill' : 'Mark as Core Skill (up to 10 max)'}
+                  />
+                  {skill}
+                  <X size={13} style={{ cursor: 'pointer' }} onClick={() => handleRemoveSkill(skill)} />
+                </span>
+              );
+            })}
           </div>
         </div>
 
