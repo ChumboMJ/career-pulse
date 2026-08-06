@@ -9,11 +9,12 @@ import {
   ShieldCheck, 
   ChevronRight,
   Sparkles,
-  Star
+  Star,
+  Bookmark
 } from 'lucide-react';
 import { calculateJobMatch } from '../services/jobMatcher.js';
 
-export default function JobCard({ job, userProfile, onSelectJob, onTailorJob, onQuickLogUnemployment, isLogged }) {
+export default function JobCard({ job, userProfile, onSelectJob, onTailorJob, onQuickLogUnemployment, isLogged, onSaveToVault, isSavedInVault }) {
   const match = calculateJobMatch(job, userProfile);
   const score = match.matchScore;
 
@@ -75,15 +76,33 @@ export default function JobCard({ job, userProfile, onSelectJob, onTailorJob, on
             </div>
           </div>
 
-          {/* Match Score Badge */}
-          <div style={{ textAlign: 'right', flexShrink: 0 }}>
+          {/* Match Score Badge & Bookmark */}
+          <div style={{ textAlign: 'right', flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px' }}>
             <div className={`badge ${badgeClass}`} style={{ fontSize: '0.9rem', padding: '6px 12px' }}>
               <Sparkles size={14} />
               {score}% Match
             </div>
-            <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-              Grade {match.grade} Weighted Score
-            </div>
+            
+            <button
+              onClick={() => onSaveToVault(job)}
+              style={{
+                background: isSavedInVault ? 'rgba(168, 85, 247, 0.2)' : 'rgba(255,255,255,0.05)',
+                border: isSavedInVault ? '1px solid var(--accent-purple)' : '1px solid var(--glass-border)',
+                color: isSavedInVault ? '#c084fc' : 'var(--text-muted)',
+                borderRadius: '6px',
+                padding: '4px 8px',
+                fontSize: '0.72rem',
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px',
+                fontWeight: 600
+              }}
+              title="Save to Curated Match Vault CRM"
+            >
+              <Bookmark size={12} fill={isSavedInVault ? '#c084fc' : 'none'} />
+              {isSavedInVault ? 'In Vault' : 'Save Match'}
+            </button>
           </div>
         </div>
 
@@ -110,7 +129,6 @@ export default function JobCard({ job, userProfile, onSelectJob, onTailorJob, on
             Skill Gap Breakdown ({match.matchedSkills.length}/{match.totalRequiredCount} Matched)
           </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-            {/* Matched Core Skills (Gold) */}
             {(match.matchedCoreSkills || []).map((skill, idx) => (
               <span key={`core-${idx}`} style={{
                 fontSize: '0.75rem',
@@ -127,7 +145,6 @@ export default function JobCard({ job, userProfile, onSelectJob, onTailorJob, on
                 <Star size={11} fill="#fcd34d" /> Core: {skill}
               </span>
             ))}
-            {/* Matched Secondary Skills (Emerald) */}
             {(match.matchedSecondarySkills || []).map((skill, idx) => (
               <span key={`sec-${idx}`} style={{
                 fontSize: '0.75rem',
@@ -143,7 +160,6 @@ export default function JobCard({ job, userProfile, onSelectJob, onTailorJob, on
                 <CheckCircle2 size={11} /> {skill}
               </span>
             ))}
-            {/* Missing Skills */}
             {match.missingSkills.slice(0, 3).map((skill, idx) => (
               <span key={`miss-${idx}`} style={{
                 fontSize: '0.75rem',

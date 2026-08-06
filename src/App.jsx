@@ -9,9 +9,11 @@ import AnalyticsDashboard from './components/AnalyticsDashboard';
 import TopJobBoardsBar from './components/TopJobBoardsBar';
 import EmployerFeedManager from './components/EmployerFeedManager';
 import ProfileSelectorModal from './components/ProfileSelectorModal';
+import CuratedVault from './components/CuratedVault';
 import { searchJobs } from './services/jobApi';
 import { getActiveProfile, saveProfile, setActiveProfileId } from './services/profileManager';
 import { getWorkSearchLogs, saveWorkSearchLog } from './services/unemploymentLogger';
+import { getCuratedVaultItems, saveToCuratedVault } from './services/curatedVault';
 import { calculateJobMatch } from './services/jobMatcher';
 import { Search, Sparkles, RefreshCw, UserCheck } from 'lucide-react';
 
@@ -31,6 +33,7 @@ export default function App() {
   const [tailorJobTarget, setTailorJobTarget] = useState(null);
 
   const [loggedApplications, setLoggedApplications] = useState([]);
+  const [vaultItems, setVaultItems] = useState([]);
 
   // Save current profile whenever edited
   const handleUpdateProfile = (updatedProfile) => {
@@ -45,10 +48,11 @@ export default function App() {
     setShowProfileModal(false);
   };
 
-  // Load initial jobs & unemployment logs
+  // Load initial jobs, vault items & unemployment logs
   useEffect(() => {
     fetchJobs();
     setLoggedApplications(getWorkSearchLogs());
+    setVaultItems(getCuratedVaultItems());
   }, [userProfile]);
 
   const fetchJobs = async () => {
@@ -60,7 +64,6 @@ export default function App() {
       userSkills: userProfile?.skills || []
     });
 
-    // Sort jobs by Match Score descending for the active profile
     const sorted = results.map(job => ({
       ...job,
       computedMatch: calculateJobMatch(job, userProfile)
@@ -71,6 +74,15 @@ export default function App() {
       setTailorJobTarget(sorted[0]);
     }
     setLoadingJobs(false);
+  };
+
+  const handleSaveJobToVault = (job) => {
+    const updatedVault = saveToCuratedVault(job, userProfile);
+    setVaultItems(updatedVault);
+  };
+
+  const isJobInVault = (jobId) => {
+    return vaultItems.some(v => v.jobId === jobId || v.id === jobId);
   };
 
   const handleAutoMatchProfile = () => {
@@ -119,11 +131,12 @@ export default function App() {
         setActiveTab={setActiveTab} 
         userProfile={userProfile} 
         loggedApplicationsCount={loggedApplications.length}
+        vaultCount={vaultItems.length}
         onOpenProfileSelector={() => setShowProfileModal(true)}
       />
 
       <main style={{ flex: 1, maxWidth: '1300px', width: '100%', margin: '0 auto', padding: '32px 24px' }}>
-        {/* Profile Onboarding / Active Context Banner */}
+        {/* Profile Context Banner */}
         <div style={{
           background: 'rgba(30, 41, 59, 0.4)',
           border: '1px solid var(--glass-border)',
@@ -173,7 +186,7 @@ export default function App() {
                     type="text"
                     className="input-field"
                     style={{ paddingLeft: '42px' }}
-                    placeholder="Search roles, target skills (e.g. React, Python, Remote)..."
+                    placeholder="Search roles, target skills (e.g. C#, React, Azure)..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                   />
@@ -245,6 +258,8 @@ export default function App() {
                     onTailorJob={handleTailorJob}
                     onQuickLogUnemployment={handleQuickLogUnemployment}
                     isLogged={isJobLogged(job.id)}
+                    onSaveToVault={handleSaveJobToVault}
+                    isSavedInVault={isJobInVault(job.id)}
                   />
                 ))}
               </div>
@@ -252,12 +267,21 @@ export default function App() {
           </div>
         )}
 
-        {/* Tab 2: Master Resume */}
+        {/* Tab 2: Curated Match Vault CRM */}
+        {activeTab === 'vault' && (
+          <CuratedVault
+            userProfile={userProfile}
+            onTailorJob={handleTailorJob}
+            onLogUnemployment={handleQuickLogUnemployment}
+          />
+        )}
+
+        {/* Tab 3: Master Resume */}
         {activeTab === 'resume' && (
           <ResumeUploader userProfile={userProfile} setUserProfile={handleUpdateProfile} />
         )}
 
-        {/* Tab 3: Tailor & Cover Letter Studio */}
+        {/* Tab 4: Tailor & Cover Letter Studio */}
         {activeTab === 'tailor' && (
           <TailorStudio 
             userProfile={userProfile} 
@@ -267,12 +291,12 @@ export default function App() {
           />
         )}
 
-        {/* Tab 4: Unemployment Log */}
+        {/* Tab 5: Unemployment Log */}
         {activeTab === 'unemployment' && (
           <UnemploymentLog />
         )}
 
-        {/* Tab 5: Analytics */}
+        {/* Tab 6: Analytics */}
         {activeTab === 'analytics' && (
           <AnalyticsDashboard userProfile={userProfile} jobs={jobs} loggedCount={loggedApplications.length} />
         )}

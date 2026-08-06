@@ -7,15 +7,17 @@ import {
   BarChart3, 
   Sparkles,
   UserCheck,
-  ChevronDown
+  ChevronDown,
+  Bookmark
 } from 'lucide-react';
 
-export default function Header({ activeTab, setActiveTab, userProfile, loggedApplicationsCount, onOpenProfileSelector }) {
+export default function Header({ activeTab, setActiveTab, userProfile, loggedApplicationsCount, vaultCount, onOpenProfileSelector }) {
   const tabs = [
     { id: 'jobs', label: 'Job Search & Match', icon: Briefcase },
+    { id: 'vault', label: 'Match Vault', icon: Bookmark, badgeCount: vaultCount },
     { id: 'resume', label: 'Master Resume', icon: FileText },
     { id: 'tailor', label: 'Tailor & Cover Letter', icon: Wand2 },
-    { id: 'unemployment', label: 'Unemployment Log', icon: ShieldCheck },
+    { id: 'unemployment', label: 'Unemployment Log', icon: ShieldCheck, badgeCount: loggedApplicationsCount },
     { id: 'analytics', label: 'Analytics', icon: BarChart3 }
   ];
 
@@ -88,21 +90,21 @@ export default function Header({ activeTab, setActiveTab, userProfile, loggedApp
                   display: 'flex',
                   alignItems: 'center',
                   gap: '8px',
-                  padding: '8px 16px',
+                  padding: '8px 14px',
                   borderRadius: 'var(--radius-md)',
                   border: 'none',
                   background: isActive ? 'var(--gradient-brand)' : 'transparent',
                   color: isActive ? '#fff' : 'var(--text-secondary)',
                   fontWeight: isActive ? 600 : 500,
-                  fontSize: '0.88rem',
+                  fontSize: '0.86rem',
                   cursor: 'pointer',
                   transition: 'all 0.2s ease',
                   boxShadow: isActive ? '0 4px 12px rgba(99, 102, 241, 0.3)' : 'none'
                 }}
               >
-                <Icon size={17} />
+                <Icon size={16} />
                 <span>{tab.label}</span>
-                {tab.id === 'unemployment' && loggedApplicationsCount > 0 && (
+                {tab.badgeCount > 0 && (
                   <span style={{
                     background: isActive ? 'rgba(255,255,255,0.25)' : 'var(--accent-indigo)',
                     color: '#fff',
@@ -111,7 +113,7 @@ export default function Header({ activeTab, setActiveTab, userProfile, loggedApp
                     fontSize: '0.7rem',
                     fontWeight: 700
                   }}>
-                    {loggedApplicationsCount}
+                    {tab.badgeCount}
                   </span>
                 )}
               </button>
@@ -142,7 +144,7 @@ export default function Header({ activeTab, setActiveTab, userProfile, loggedApp
               <ChevronDown size={14} color="var(--text-muted)" />
             </div>
             <div style={{ color: 'var(--text-muted)', fontSize: '0.72rem' }}>
-              {skillCount} Skills • {userProfile?.title ? userProfile.title.slice(0, 20) + '...' : 'Profile'}
+              {skillCount} Skills • {userProfile?.title ? userProfile.title.slice(0, 18) + '...' : 'Profile'}
             </div>
           </div>
         </button>
